@@ -1,242 +1,68 @@
-// "use client";
-
-// import React, { useState } from 'react';
-// import { createAppKit, Provider } from '@reown/appkit/react';
-// import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
-// import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
-// import { Connection, PublicKey, Transaction, SystemProgram } from '@solana/web3.js';
-// import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
-// import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
-// import '@reown/appkit-wallet-button/react';
-// import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks'
-
-// // Set up Solana Adapter
-// const solanaWeb3JsAdapter = new SolanaAdapter({
-//   wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
-// });
-
-// // Define your project ID from Reown
-// const projectId = '6uhcb47fb25788ec8cb';
-
-// // Metadata for the app
-// const metadata = {
-//   name: 'AppKit',
-//   description: 'AppKit Solana Example',
-//   url: 'http://localhost:3000',
-//   icons: ['https://avatars.githubusercontent.com/u/179229932'],
-// };
-
-// // Initialize the app with AppKit
-// createAppKit({
-//   adapters: [solanaWeb3JsAdapter],
-//   networks: [solana, solanaTestnet, solanaDevnet],
-//   metadata: metadata,
-//   projectId,
-//   features: {
-//     analytics: true, // Optional - defaults to your Cloud configuration
-//     swaps: false,
-//   }
-// })
-
-// export default function Home() {
-//   // State for managing wallet balance and token accounts
-//   const [balance, setBalance] = useState<string | null>(null);
-//   const [tokenAccounts, setTokenAccounts] = useState<any[]>([]); // Array to store token account info
-
-//   // Retrieve the connected wallet address and connection from AppKit
-//   const { address } = useAppKitAccount(); // Gets the public address of the connected wallet
-//   const { connection } = useAppKitConnection(); // Gets the Solana connection from AppKit
-//   const { walletProvider } = useAppKitProvider<Provider>('solana')
-
-//   // Function to fetch the balance of the connected wallet
-//   const fetchWalletBalance = async () => {
-//     if (!address) {
-//       alert('Please connect a wallet!');
-//       return;
-//     }
-
-//     try {
-//       const publicKey = new PublicKey(address);
-//       const lamports = await connection.getBalance(publicKey);
-//       const solBalance = lamports / 1_000_000_000;
-//       setBalance(solBalance.toFixed(2));
-//     } catch (error) {
-//       console.error('Error fetching balance:', error);
-//       alert('Error fetching balance. Please try again.');
-//     }
-//   };
-
-//   // Function to fetch all token accounts for the connected wallet
-//   const fetchTokenAccounts = async () => {
-//     if (!address) {
-//       alert('Please connect a wallet!');
-//       return;
-//     }
-
-//     try {
-//       const publicKey = new PublicKey(address);
-
-//       // Fetch all token accounts associated with the connected wallet
-//       const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
-//         programId: SystemProgram.programId,
-//       });
-//       // TokenInstructions.TOKEN_PROGRAM_ID
-//       const tokenAccountsInfo = response.value.map((item) => {
-//         const tokenAccount = item.account.data.parsed.info;
-//         return {
-//           mint: tokenAccount.mint,
-//           tokenAmount: tokenAccount.tokenAmount.uiAmountString,
-//         };
-//       });
-
-//       setTokenAccounts(tokenAccountsInfo);
-//     } catch (error) {
-//       console.error('Error fetching token accounts:', error);
-//       alert('Error fetching token accounts. Please try again.');
-//     }
-//   };
-
-//   // Function to close all token accounts and transfer any SOL to the connected wallet
-//   const claim = async () => {
-//     if (!address || !walletProvider) {
-//       alert('Please connect a wallet!');
-//       return;
-//     }
-
-//     try {
-//       const transaction = new Transaction();
-//       const publicKey = new PublicKey(address);
-
-//       // Close all token accounts
-//       for (const tokenAccount of tokenAccounts) {
-//         const tokenPublicKey = new PublicKey(tokenAccount.mint); // Token account address
-//         const closeAccountIx = SystemProgram.transfer({
-//           fromPubkey: tokenPublicKey,
-//           toPubkey: publicKey,
-//           lamports: 0,
-//         });
-//         transaction.add(closeAccountIx); // Add close account instruction to the transaction
-//       }
-//       console.log("transaction:", transaction)
-//       // Sign and send the transaction
-//       // await connection.sendTransaction( new transaction);
-//       await connection.sendTransaction(transaction);
-
-//       alert('Successfully closed all ATAs and transferred lamports!');
-//     } catch (error) {
-//       console.error('Error closing token accounts:', error);
-//       alert('Error closing token accounts. Please try again.');
-//     }
-//   };
-
-//   return (
-//     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
-//       <h1>Solana Wallet Management</h1>
-
-//       {/* Wallet connection buttons */}
-//       <appkit-wallet-button wallet="phantom" />
-//       <appkit-account-button swaps="true" />
-
-//       {/* Display Wallet Address */}
-//       {address && (
-//         <div className="mt-4">
-//           <p>Connected Wallet: {address}</p>
-//         </div>
-//       )}
-
-//       {/* Button to fetch balance */}
-//       <div className="mt-4">
-//         <button
-//           onClick={fetchWalletBalance}
-//           className="bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-md"
-//         >
-//           Get Connected Wallet Balance
-//         </button>
-//       </div>
-
-//       {/* Display Section */}
-//       {balance !== null && (
-//         <div className="mt-4 p-4 bg-gray-800 rounded-md">
-//           <p className="text-xl">Balance: {balance} SOL</p>
-//         </div>
-//       )}
-
-//       {/* Button to fetch token accounts */}
-//       <div className="mt-4">
-//         <button
-//           onClick={fetchTokenAccounts}
-//           className="bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-md"
-//         >
-//           Get Associated Token Accounts
-//         </button>
-//       </div>
-
-//       {/* Display Token Accounts */}
-//       {tokenAccounts.length > 0 && (
-//         <div className="mt-4 p-4 bg-gray-800 rounded-md">
-//           <h2>Token Accounts</h2>
-//           <ul>
-//             {tokenAccounts.map((account, index) => (
-//               <li key={index}>
-//                 Mint: {account.mint}, Balance: {account.tokenAmount}
-//               </li>
-//             ))}
-//           </ul>
-//         </div>
-//       )}
-
-//       {/* Claim Button */}
-//       <div className="mt-4">
-//         <button
-//           onClick={claim}
-//           className="bg-red-500 hover:bg-red-700 text-white p-2 rounded-md"
-//         >
-//           Claim (Close ATAs and Deposit Lamports)
-//         </button>
-//       </div>
-//     </div>
-//   );
-// }
-
-
-
-
-
-
 "use client";
 
 import React, { useState } from 'react';
-import { createAppKit, Provider } from '@reown/appkit/react';
-import { SolanaAdapter } from '@reown/appkit-adapter-solana/react';
-import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets';
-import { 
-  Connection, 
-  PublicKey, 
-  Transaction, 
-  SystemProgram,
-  LAMPORTS_PER_SOL,
-  TransactionInstruction
-} from '@solana/web3.js';
-import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react';
-import { useAppKitConnection } from '@reown/appkit-adapter-solana/react';
-import '@reown/appkit-wallet-button/react';
-import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks';
+import { createAppKit } from '@reown/appkit/react'
+import { SolanaAdapter } from '@reown/appkit-adapter-solana/react'
+import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
+import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks'
+import { Connection, PublicKey, GetProgramAccountsFilter } from '@solana/web3.js'
+import '@reown/appkit-wallet-button/react'
+import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react'
+import { useAppKitConnection, type Provider } from '@reown/appkit-adapter-solana/react'
 import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
-// Setup remains the same
+// Types
+interface TokenAmount {
+  amount: string;
+  decimals: number;
+  uiAmount: number;
+  uiAmountString: string;
+}
+
+interface ParsedAccountInfo {
+  mint: string;
+  owner: string;
+  tokenAmount: TokenAmount;
+  delegate: string | null;
+  state: string;
+  isNative: boolean;
+}
+
+interface ParsedAccount {
+  program: string;
+  parsed: {
+    info: ParsedAccountInfo;
+    type: string;
+  };
+  space: number;
+}
+
+interface TokenAccount {
+  mint: string;
+  amount: string;
+  decimals: number;
+  uiAmount: number;
+  symbol?: string;
+  name?: string;
+}
+
+// Set up Solana Adapter
 const solanaWeb3JsAdapter = new SolanaAdapter({
-  wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()],
+  wallets: [new PhantomWalletAdapter(), new SolflareWalletAdapter()]
 });
 
+// Define your project ID from Reown
 const projectId = '8c2b1cb47fb22fef85cd1a06d88ec8cb';
 
+// Metadata for the app
 const metadata = {
   name: 'AppKit',
   description: 'AppKit Solana Example',
   url: 'http://localhost:3000',
-  icons: ['https://avatars.githubusercontent.com/u/179229932'],
+  icons: ['https://avatars.githubusercontent.com/u/179229932']
 };
 
+// Initialize the app with AppKit
 createAppKit({
   adapters: [solanaWeb3JsAdapter],
   networks: [solana, solanaTestnet, solanaDevnet],
@@ -248,171 +74,173 @@ createAppKit({
   }
 });
 
+// Utility function to format token amounts
+const formatAmount = (amount: string, decimals: number): string => {
+  const value = parseInt(amount) / Math.pow(10, decimals);
+  return value.toLocaleString(undefined, { 
+    maximumFractionDigits: decimals 
+  });
+};
+
 export default function Home() {
+  const [solanaAddress, setSolanaAddress] = useState('');
   const [balance, setBalance] = useState<string | null>(null);
-  const [tokenAccounts, setTokenAccounts] = useState<any[]>([]);
+  const [tokenAccounts, setTokenAccounts] = useState<TokenAccount[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const connection = new Connection('https://api.devnet.solana.com');
+  // const { connection } = useAppKitConnection();
 
-  const { address } = useAppKitAccount();
-  const { connection } = useAppKitConnection();
-  const { walletProvider } = useAppKitProvider<Provider>('solana');
-
-  const fetchWalletBalance = async () => {
-    if (!address) {
-      alert('Please connect a wallet!');
+  const fetchBalance = async () => {
+    if (!solanaAddress) {
+      alert('Please enter a Solana address!');
       return;
     }
 
     try {
-      const publicKey = new PublicKey(address);
+      const publicKey = new PublicKey(solanaAddress);
       const lamports = await connection.getBalance(publicKey);
-      const solBalance = lamports / LAMPORTS_PER_SOL;
+      const solBalance = lamports / 1_000_000_000;
       setBalance(solBalance.toFixed(2));
     } catch (error) {
       console.error('Error fetching balance:', error);
-      alert('Error fetching balance. Please try again.');
+      alert('Error fetching balance. Please check the address and try again.');
     }
   };
-
-  const fetchTokenAccounts = async () => {
-    if (!address) {
-      alert('Please connect a wallet!');
+ 
+  const getAssociatedTokenAccounts = async () => {
+    if (!solanaAddress) {
+      alert('Please enter a Solana address!');
       return;
     }
 
+    setIsLoading(true);
     try {
-      const publicKey = new PublicKey(address);
+      const publicKey = new PublicKey(solanaAddress);
 
-      // Correctly fetch token accounts using TOKEN_PROGRAM_ID
-      const response = await connection.getParsedTokenAccountsByOwner(publicKey, {
-        programId: TOKEN_PROGRAM_ID
-      });
-
-      const tokenAccountsInfo = response.value.map((item) => ({
-        accountAddress: item.pubkey.toString(),
-        mint: item.account.data.parsed.info.mint,
-        tokenAmount: item.account.data.parsed.info.tokenAmount.uiAmountString
-      }));
-
-      setTokenAccounts(tokenAccountsInfo);
-    } catch (error) {
-      console.error('Error fetching token accounts:', error);
-      alert('Error fetching token accounts. Please try again.');
-    }
-  };
-
-  const claim = async () => {
-    if (!address || !walletProvider) {
-      alert('Please connect a wallet!');
-      return;
-    }
-
-    try {
-      const transaction = new Transaction();
-      const ownerPublicKey = new PublicKey(address);
-
-      // Add close account instructions for each token account
-      for (const tokenAccount of tokenAccounts) {
-        const tokenAccountPubkey = new PublicKey(tokenAccount.accountAddress);
+      const filters: GetProgramAccountsFilter[] = [
+        { dataSize: 165 },
+        {
+          memcmp: {
+            offset: 32,
+            bytes: publicKey.toBase58()
+          }
+        }
+      ];
+     
+      const accounts = await connection.getParsedProgramAccounts(
+        TOKEN_PROGRAM_ID,
+        { filters }
+      );
+  
+      const tokenAccountsData: TokenAccount[] = accounts.map(account => {
+        const parsedData = (account.account.data as ParsedAccount).parsed.info;
         
-        const closeAccountIx = new TransactionInstruction({
-          programId: TOKEN_PROGRAM_ID,
-          keys: [
-            { pubkey: tokenAccountPubkey, isSigner: false, isWritable: true },
-            { pubkey: ownerPublicKey, isSigner: true, isWritable: true },
-            { pubkey: ownerPublicKey, isSigner: true, isWritable: false },
-          ],
-          data: Buffer.from([9]) // Close account instruction = 9
-        });
+        return {
+          mint: parsedData.mint,
+          amount: parsedData.tokenAmount.amount,
+          decimals: parsedData.tokenAmount.decimals,
+          uiAmount: parsedData.tokenAmount.uiAmount,
+          symbol: '',
+          name: ''
+        };
+      });
+      console.log("tokenAccountsData:", tokenAccountsData)
 
-        transaction.add(closeAccountIx);
-      }
+      // Fetch token metadata for each account
+      const accountsWithMetadata = await Promise.all(
+        tokenAccountsData.map(async (account) => {
+          try {
+            const response = await fetch(`https://public-api.solscan.io/token/meta/${account.mint}`);
+            const metadata = await response.json();
+            
+            return {
+              ...account,
+              symbol: metadata.symbol || 'Unknown',
+              name: metadata.name || 'Unknown Token'
+            };
+          } catch (error) {
+            return account;
+          }
+        })
+      );
+      console.log("accWithMetadata:", accountsWithMetadata);
 
-      // Set fee payer and get recent blockhash
-      transaction.feePayer = ownerPublicKey;
-      const { blockhash } = await connection.getLatestBlockhash('confirmed');
-      transaction.recentBlockhash = blockhash;
+      // Filter out accounts with zero balance
+      // const nonZeroAccounts = accountsWithMetadata.filter(
+      //   account => parseFloat(account.amount) > 0
+      // );
 
-      // Sign and send transaction using wallet provider
-      await walletProvider.signAndSendTransaction(tx, [])
-      
-      // Wait for confirmation
-      const confirmation = await connection.confirmTransaction(signedTx, 'confirmed');
-      
-      if (confirmation.value.err) {
-        throw new Error('Transaction failed to confirm');
-      }
-
-      alert('Successfully closed token accounts!');
-      // Refresh token accounts list
-      await fetchTokenAccounts();
+      // setTokenAccounts(nonZeroAccounts);
+      // console.log("Token accounts found:", nonZeroAccounts);
     } catch (error) {
-      console.error('Error closing token accounts:', error);
-      alert('Error closing token accounts. Please try again.');
+      console.error('Error getting associated token accounts:', error);
+      alert('Error getting associated token accounts. Please check the address and try again.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
-      <h1>Solana Wallet Management</h1>
+      <h1 className="text-2xl mb-6">Solana Token Account Explorer</h1>
 
       <appkit-wallet-button wallet="phantom" />
+      <appkit-network-button network="solana" />
       <appkit-account-button swaps="true" />
 
-      {address && (
-        <div className="mt-4">
-          <p>Connected Wallet: {address}</p>
+      <div className="mt-6 w-full max-w-xl">
+        <input
+          type="text"
+          className="w-full bg-gray-700 text-white p-3 rounded-md"
+          placeholder="Enter Solana address"
+          value={solanaAddress}
+          onChange={(e) => setSolanaAddress(e.target.value)}
+        />
+        
+        <div className="flex gap-2 mt-4">
+          <button
+            onClick={fetchBalance}
+            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white p-3 rounded-md"
+          >
+            Get Balance
+          </button>
+          <button
+            onClick={getAssociatedTokenAccounts}
+            className="flex-1 bg-blue-500 hover:bg-blue-700 text-white p-3 rounded-md"
+            disabled={isLoading}
+          >
+            {isLoading ? 'Loading...' : 'Get Token Accounts'}
+          </button>
         </div>
-      )}
-
-      <div className="mt-4">
-        <button
-          onClick={fetchWalletBalance}
-          className="bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-md"
-        >
-          Get Connected Wallet Balance
-        </button>
       </div>
 
       {balance !== null && (
-        <div className="mt-4 p-4 bg-gray-800 rounded-md">
+        <div className="mt-6 p-4 bg-gray-800 rounded-md w-full max-w-xl">
           <p className="text-xl">Balance: {balance} SOL</p>
         </div>
       )}
 
-      <div className="mt-4">
-        <button
-          onClick={fetchTokenAccounts}
-          className="bg-blue-500 hover:bg-blue-700 text-white p-2 rounded-md"
-        >
-          Get Associated Token Accounts
-        </button>
-      </div>
-
       {tokenAccounts.length > 0 && (
-        <div className="mt-4 p-4 bg-gray-800 rounded-md">
-          <h2>Token Accounts</h2>
-          <ul>
+        <div className="mt-6 p-4 bg-gray-800 rounded-md w-full max-w-xl">
+          <h2 className="text-xl mb-4">Token Accounts</h2>
+          <div className="space-y-4">
             {tokenAccounts.map((account, index) => (
-              <li key={index}>
-                Account: {account.accountAddress.slice(0, 4)}...{account.accountAddress.slice(-4)}
-                <br />
-                Mint: {account.mint.slice(0, 4)}...{account.mint.slice(-4)}
-                <br />
-                Balance: {account.tokenAmount}
-              </li>
+              <div key={index} className="p-3 bg-gray-700 rounded-md">
+                <p className="font-semibold">
+                  {account.name || account.symbol || 'Unknown Token'}
+                </p>
+                <p className="text-gray-300">
+                  Mint: {account.mint.slice(0, 4)}...{account.mint.slice(-4)}
+                </p>
+                <p className="text-gray-300">
+                  Balance: {formatAmount(account.amount, account.decimals)}
+                </p>
+              </div>
             ))}
-          </ul>
+          </div>
         </div>
       )}
-
-      <div className="mt-4">
-        <button
-          onClick={claim}
-          className="bg-red-500 hover:bg-red-700 text-white p-2 rounded-md"
-        >
-          Close Token Accounts
-        </button>
-      </div>
     </div>
   );
 }
