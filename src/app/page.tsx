@@ -4,12 +4,12 @@ import React, { useState } from 'react';
 import { createAppKit } from '@reown/appkit/react'
 import { SolanaAdapter } from '@reown/appkit-adapter-solana/react'
 import { PhantomWalletAdapter, SolflareWalletAdapter } from '@solana/wallet-adapter-wallets'
-import { solana, solanaTestnet, solanaDevnet } from '@reown/appkit/networks'
+import { solana, solanaTestnet, solanaDevnet, b3 } from '@reown/appkit/networks'
 import { Connection, PublicKey, GetProgramAccountsFilter } from '@solana/web3.js'
 import '@reown/appkit-wallet-button/react'
 import { useAppKitAccount, useAppKitProvider } from '@reown/appkit/react'
 import { useAppKitConnection, type Provider } from '@reown/appkit-adapter-solana/react'
-import { TOKEN_PROGRAM_ID } from '@solana/spl-token';
+import { AccountLayout, TOKEN_PROGRAM_ID } from '@solana/spl-token';
 
 // Types
 interface TokenAmount {
@@ -38,10 +38,11 @@ interface ParsedAccount {
 }
 
 interface TokenAccount {
+  decimals: number;
   mint: string;
   amount: string;
-  decimals: number;
-  uiAmount: number;
+  // decimals: number;
+  // uiAmount: number;
   symbol?: string;
   name?: string;
 }
@@ -88,8 +89,9 @@ export default function Home() {
   const [tokenAccounts, setTokenAccounts] = useState<TokenAccount[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   
-  const connection = new Connection('https://api.devnet.solana.com');
+  // const connection = new Connection('https://api.mainnet-beta.solana.com');
   // const { connection } = useAppKitConnection();
+  const connection = new Connection('https://rpc.helius.xyz/?api-key=1691c2d7-842b-4cdb-8e73-ce38fb82acda');
 
   const fetchBalance = async () => {
     if (!solanaAddress) {
@@ -107,7 +109,10 @@ export default function Home() {
       alert('Error fetching balance. Please check the address and try again.');
     }
   };
- 
+
+
+
+
   const getAssociatedTokenAccounts = async () => {
     if (!solanaAddress) {
       alert('Please enter a Solana address!');
@@ -117,62 +122,37 @@ export default function Home() {
     setIsLoading(true);
     try {
       const publicKey = new PublicKey(solanaAddress);
-
-      const filters: GetProgramAccountsFilter[] = [
-        { dataSize: 165 },
+      
+      const tokenAccounts = await connection.getTokenAccountsByOwner(
+        publicKey,
         {
-          memcmp: {
-            offset: 32,
-            bytes: publicKey.toBase58()
-          }
+          programId: TOKEN_PROGRAM_ID,
         }
-      ];
-     
-      const accounts = await connection.getParsedProgramAccounts(
-        TOKEN_PROGRAM_ID,
-        { filters }
       );
-  
-      const tokenAccountsData: TokenAccount[] = accounts.map(account => {
-        const parsedData = (account.account.data as ParsedAccount).parsed.info;
-        
-        return {
-          mint: parsedData.mint,
-          amount: parsedData.tokenAmount.amount,
-          decimals: parsedData.tokenAmount.decimals,
-          uiAmount: parsedData.tokenAmount.uiAmount,
-          symbol: '',
-          name: ''
-        };
-      });
-      console.log("tokenAccountsData:", tokenAccountsData)
+      
+      console.log("Raw token accounts:", tokenAccounts);
 
-      // Fetch token metadata for each account
-      const accountsWithMetadata = await Promise.all(
-        tokenAccountsData.map(async (account) => {
-          try {
-            const response = await fetch(`https://public-api.solscan.io/token/meta/${account.mint}`);
-            const metadata = await response.json();
-            
-            return {
-              ...account,
-              symbol: metadata.symbol || 'Unknown',
-              name: metadata.name || 'Unknown Token'
-            };
-          } catch (error) {
-            return account;
-          }
+      const tokenAccountsData: TokenAccount[] = tokenAccounts.value
+        .map(account => {
+          const accountData = AccountLayout.decode(account.account.data);
+          // amount is u64, so it's already a BigInt
+          const amount = accountData.amount.toString(); // Convert BigInt to string for storage/display
+          const decimals = 9; // You might want to fetch this from the mint account
+          
+          return {
+            mint: new PublicKey(accountData.mint).toString(),
+            amount: amount,
+            decimals: decimals,
+            uiAmount: Number(amount) / Math.pow(10, decimals),
+            symbol: '',
+            name: ''
+          };
         })
-      );
-      console.log("accWithMetadata:", accountsWithMetadata);
+        .filter(account => Number(account.amount) > 0);
 
-      // Filter out accounts with zero balance
-      // const nonZeroAccounts = accountsWithMetadata.filter(
-      //   account => parseFloat(account.amount) > 0
-      // );
+      console.log("Parsed token accounts:", tokenAccountsData);
+      setTokenAccounts(tokenAccountsData);
 
-      // setTokenAccounts(nonZeroAccounts);
-      // console.log("Token accounts found:", nonZeroAccounts);
     } catch (error) {
       console.error('Error getting associated token accounts:', error);
       alert('Error getting associated token accounts. Please check the address and try again.');
@@ -180,6 +160,7 @@ export default function Home() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
@@ -235,6 +216,7 @@ export default function Home() {
                 </p>
                 <p className="text-gray-300">
                   Balance: {formatAmount(account.amount, account.decimals)}
+                  
                 </p>
               </div>
             ))}
@@ -244,3 +226,28 @@ export default function Home() {
     </div>
   );
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
